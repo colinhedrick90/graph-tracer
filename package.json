@@ -1,0 +1,14 @@
+{
+  "name": "graph-tracer",
+  "version": "1.0.0",
+  "description": "A transparent overlay for digitizing X/Y data from scanned graphs.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": ["graph", "digitizer", "plot", "electron", "response-spectrum"],
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.0.0"
+  }
+}

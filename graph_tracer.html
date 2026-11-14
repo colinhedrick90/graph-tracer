@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph Tracer Overlay</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js plugin for displaying data labels on the graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: rgba(0, 0, 0, 0.199); /* Make body background fully transparent */
+        overflow: hidden; /* Hide scrollbars */
+      }
+      /* Custom styles for a draggable and resizable handle */
+      .drag-handle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 24px;
+        cursor: move;
+        -webkit-app-region: drag; /* Correct way to make a frameless window draggable */
+      }
+      .resize-handle {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 20px;
+        height: 20px;
+        cursor: nwse-resize;
+        background-image: linear-gradient(
+          135deg,
+          transparent 45%,
+          #9ca3af 45%,
+          #9ca3af 55%,
+          transparent 55%,
+          transparent 100%
+        );
+        z-index: 50; /* Ensure it's on top */
+      }
+      #app-container {
+        box-sizing: border-box;
+      }
+      /* Fix for flexbox shrinking issue */
+      .flex-resizable-child {
+        min-height: 0;
+        min-width: 0;
+      }
+      .graph-area-fixed {
+        flex-grow: 1 !important;
+      }
+      #graph-area {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #graphCanvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+        cursor: crosshair; /* Show crosshair when interacting with the graph */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Main Application Container -->
+    <div
+      id="app-container"
+      class="absolute bg-gray-900 bg-opacity-50 backdrop-blur-sm text-white rounded-2xl shadow-2xl border border-gray-700/50 p-4"
+      style="
+        left: 50px;
+        top: 50px;
+        width: 1000px;
+        height: 700px;
+        overflow: hidden;
+        min-width: 400px;
+        min-height: 300px;
+      "
+    >
+      <div class="drag-handle"></div>
+      <div class="resize-handle"></div>
+
+      <div class="flex h-full gap-6">
+        <!-- Left Side: Graph Area -->
+        <div
+          class="flex flex-grow flex-col h-full bg-white/10 rounded-lg p-4 flex-resizable-child graph-area-fixed"
+          id="graph-area"
+        >
+          <h2 class="text-lg font-bold mb-2 text-center">Graph Area</h2>
+          <div class="relative flex-grow flex flex-resizable-child">
+            <canvas id="graphCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const ctx = document.getElementById("graphCanvas").getContext("2d");
+      let chart;
+      let pointsData = [];
+      let chartConfig = {
+        xMin: 0,
+        xMax: 10,
+        xType: "linear",
+        xReverse: false,
+        yMin: 0,
+        yMax: 100,
+        yType: "linear",
+        yReverse: false,
+      };
+
+      // Add a toggle for point labels
+      let showPointLabels = true;
+
+      // Add a toggle for connecting lines
+      let showConnectingLines = false;
+
+      // --- Chart Configuration ---
+      function getChartOptions() {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `(${context.parsed.x.toFixed(2)}, ${context.parsed.y.toFixed(2)})`;
+                },
+              },
+            },
+            datalabels: showPointLabels
+              ? {
+                  color: "white",
+                  align: "bottom",
+                  offset: 8,
+                  font: { size: 10, weight: "bold" },
+                  formatter: (value) => `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`,
+                }
+              : {
+                  display: false,
+                },
+          },
+          scales: {
+            x: {
+              type: chartConfig.xType,
+              min: chartConfig.xMin,
+              max: chartConfig.xMax,
+              reverse: chartConfig.xReverse,
+              grid: { color: "rgba(255, 255, 255, 0.2)" },
+              ticks: { color: "white" },
+            },
+            y: {
+              type: chartConfig.yType,
+              min: chartConfig.yMin,
+              max: chartConfig.yMax,
+              reverse: chartConfig.yReverse,
+              grid: { color: "rgba(255, 255, 255, 0.2)" },
+              ticks: { color: "white" },
+            },
+          },
+        };
+      }
+
+      // --- Chart Functions ---
+      function initializeChart() {
+        if (chart) {
+          chart.destroy();
+        }
+        chart = new Chart(ctx, {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                label: "Traced Points",
+                data: pointsData,
+                backgroundColor: "rgba(59, 130, 246, 0.8)",
+                borderColor: "rgba(59, 130, 246, 0.6)",
+                pointRadius: 2,
+                pointHoverRadius: 8,
+                showLine: showConnectingLines,
+                borderWidth: 1,
+                fill: false,
+              },
+            ],
+          },
+          options: getChartOptions(),
+          plugins: [ChartDataLabels],
+        });
+      }
+
+      function updateChart() {
+        if (!chart) return;
+        chart.data.datasets[0].showLine = showConnectingLines;
+        chart.options = getChartOptions();
+        chart.update();
+      }
+
+      function clearAllPoints() {
+        pointsData = [];
+        if (chart) {
+          chart.data.datasets[0].data = pointsData;
+          chart.update();
+        }
+        // Notify side panel
+        window.electronAPI.sendToMain("main-to-sidepanel", {
+          type: "updatePoints",
+          points: pointsData,
+        });
+      }
+
+      // --- Event Listeners ---
+      document.getElementById("graphCanvas").addEventListener("click", (event) => {
+        if (!chart) return;
+        const rect = event.target.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const newPoint = {
+          x: chart.scales.x.getValueForPixel(x),
+          y: chart.scales.y.getValueForPixel(y),
+        };
+
+        pointsData.push(newPoint);
+        chart.update();
+        // Send updated points to side panel
+        window.electronAPI.sendToMain("main-to-sidepanel", {
+          type: "updatePoints",
+          points: pointsData,
+        });
+      });
+
+      document.getElementById("graphCanvas").addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        if (!chart) return;
+
+        const points = chart.getElementsAtEventForMode(event, "point", { intersect: true }, true);
+
+        if (points.length > 0) {
+          const clickedPointIndex = points[0].index;
+          pointsData.splice(clickedPointIndex, 1);
+          chart.update();
+          // Send updated points to side panel
+          window.electronAPI.sendToMain("main-to-sidepanel", {
+            type: "updatePoints",
+            points: pointsData,
+          });
+        }
+      });
+
+      // --- Window Resize Logic ---
+      const container = document.getElementById("app-container");
+      const resizeHandle = container.querySelector(".resize-handle");
+
+      let isResizing = false;
+      let initialMouseX, initialMouseY;
+      let initialWidth, initialHeight;
+
+      resizeHandle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        initialMouseX = e.clientX;
+        initialMouseY = e.clientY;
+        initialWidth = container.offsetWidth;
+        initialHeight = container.offsetHeight;
+        document.body.style.userSelect = "none";
+        e.preventDefault();
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (isResizing) {
+          const dx = e.clientX - initialMouseX;
+          const dy = e.clientY - initialMouseY;
+          const newWidth = initialWidth + dx;
+          const newHeight = initialHeight + dy;
+          const minWidth = parseInt(getComputedStyle(container).minWidth, 10);
+          const minHeight = parseInt(getComputedStyle(container).minHeight, 10);
+          container.style.width = `${Math.max(minWidth, newWidth)}px`;
+          container.style.height = `${Math.max(minHeight, newHeight)}px`;
+        }
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "auto";
+          // Re-initialize chart after resizing to fit the new container size
+          initializeChart();
+        }
+      });
+
+      // --- IPC Communication ---
+      window.electronAPI &&
+        window.electronAPI.onFromMain("sidepanel-to-main", (data) => {
+          if (data && data.type === "updateChartConfig") {
+            chartConfig = { ...chartConfig, ...data };
+            updateChart();
+          }
+          if (data && data.type === "clearPoints") {
+            clearAllPoints();
+          }
+          if (data && data.type === "toggleLines") {
+            showConnectingLines = !showConnectingLines;
+            updateChart();
+            // Send status back to side panel
+            window.electronAPI.sendToMain("main-to-sidepanel", {
+              type: "linesToggled",
+              showLines: showConnectingLines,
+            });
+          }
+        });
+
+      // --- Initial Load ---
+      document.addEventListener("DOMContentLoaded", () => {
+        initializeChart();
+      });
+
+      window.addEventListener("resize", () => {
+        initializeChart();
+      });
+
+      // Add a button to toggle labels
+      const labelToggleBtn = document.createElement("button");
+      labelToggleBtn.textContent = "Toggle Point Labels";
+      labelToggleBtn.className =
+        "absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow z-50";
+      labelToggleBtn.style.position = "absolute";
+      labelToggleBtn.style.top = "16px";
+      labelToggleBtn.style.right = "16px";
+      labelToggleBtn.onclick = function () {
+        showPointLabels = !showPointLabels;
+        updateChart();
+      };
+      document.getElementById("app-container").appendChild(labelToggleBtn);
+    </script>
+  </body>
+</html>

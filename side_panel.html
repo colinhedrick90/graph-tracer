@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Side Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: rgba(30, 41, 59, 0.95);
+        color: white;
+        margin: 0;
+        padding: 0;
+      }
+      .side-panel {
+        width: 320px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="side-panel">
+      <!-- Axis Configuration -->
+      <div class="bg-white/10 rounded-lg p-4">
+        <h2 class="text-lg font-bold mb-4 text-center">Axis Configuration</h2>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <!-- X-Axis Controls -->
+          <div>
+            <h3 class="font-semibold mb-2 text-center">X-Axis</h3>
+            <label class="block mb-1">Min:</label>
+            <input
+              type="number"
+              id="x-min"
+              value="0"
+              class="w-full bg-gray-700 rounded p-1 text-center"
+            />
+            <label class="block mt-2 mb-1">Max:</label>
+            <input
+              type="number"
+              id="x-max"
+              value="10"
+              class="w-full bg-gray-700 rounded p-1 text-center"
+            />
+            <label class="block mt-2 mb-1">Type:</label>
+            <select id="x-type" class="w-full bg-gray-700 rounded p-1">
+              <option value="linear">Linear</option>
+              <option value="logarithmic">Logarithmic</option>
+            </select>
+            <div class="mt-2 flex items-center justify-center">
+              <input
+                type="checkbox"
+                id="x-reverse"
+                class="mr-2 h-4 w-4 bg-gray-700 border-gray-600 rounded"
+              />
+              <label for="x-reverse">Reverse</label>
+            </div>
+          </div>
+          <!-- Y-Axis Controls -->
+          <div>
+            <h3 class="font-semibold mb-2 text-center">Y-Axis</h3>
+            <label class="block mb-1">Min:</label>
+            <input
+              type="number"
+              id="y-min"
+              value="0"
+              class="w-full bg-gray-700 rounded p-1 text-center"
+            />
+            <label class="block mt-2 mb-1">Max:</label>
+            <input
+              type="number"
+              id="y-max"
+              value="100"
+              class="w-full bg-gray-700 rounded p-1 text-center"
+            />
+            <label class="block mt-2 mb-1">Type:</label>
+            <select id="y-type" class="w-full bg-gray-700 rounded p-1">
+              <option value="linear">Linear</option>
+              <option value="logarithmic">Logarithmic</option>
+            </select>
+            <div class="mt-2 flex items-center justify-center">
+              <input
+                type="checkbox"
+                id="y-reverse"
+                class="mr-2 h-4 w-4 bg-gray-700 border-gray-600 rounded"
+              />
+              <label for="y-reverse">Reverse</label>
+            </div>
+          </div>
+        </div>
+        <button
+          id="update-chart"
+          class="w-full bg-blue-600 hover:bg-blue-700 rounded-md py-2 mt-4 font-semibold transition-colors"
+        >
+          Update Graph
+        </button>
+        <button
+          id="toggle-lines"
+          class="w-full bg-purple-600 hover:bg-purple-700 rounded-md py-2 mt-2 font-semibold transition-colors"
+        >
+          Toggle Connecting Lines
+        </button>
+      </div>
+
+      <!-- Data Points Table -->
+      <div class="flex-grow flex flex-col bg-white/10 rounded-lg p-4 min-h-0">
+        <h2 class="text-lg font-bold mb-2 text-center">Data Points</h2>
+        <div id="table-container" class="flex-grow overflow-y-auto pr-2">
+          <table id="points-table" class="w-full text-sm text-left">
+            <thead class="sticky top-0 bg-gray-800">
+              <tr>
+                <th class="p-2">#</th>
+                <th class="p-2">X-Coord</th>
+                <th class="p-2">Y-Coord</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Data rows will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 flex gap-2">
+          <button
+            id="copy-table"
+            class="flex-grow bg-green-600 hover:bg-green-700 rounded-md py-2 font-semibold transition-colors"
+          >
+            Copy Table
+          </button>
+          <button
+            id="clear-points"
+            class="flex-grow bg-red-600 hover:bg-red-700 rounded-md py-2 font-semibold transition-colors"
+          >
+            Clear Points
+          </button>
+        </div>
+        <div
+          id="copy-feedback"
+          class="text-center text-xs mt-2 text-green-400 opacity-0 transition-opacity"
+        >
+          Copied to clipboard!
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const pointsTableBody = document.querySelector("#points-table tbody");
+
+      function updateTable(points) {
+        pointsTableBody.innerHTML = ""; // Clear existing table
+        points.forEach((point, index) => {
+          const row = document.createElement("tr");
+          row.className = "border-b border-gray-700/50 hover:bg-gray-700/50";
+          row.innerHTML = `
+                    <td class="p-2">${index + 1}</td>
+                    <td class="p-2">${point.x.toFixed(3)}</td>
+                    <td class="p-2">${point.y.toFixed(3)}</td>
+                `;
+          pointsTableBody.appendChild(row);
+        });
+      }
+
+      function copyTableToClipboard() {
+        const rows = pointsTableBody.querySelectorAll("tr");
+        let data = "Point\tX\tY\n"; // Header for Excel
+        rows.forEach((row) => {
+          const cols = row.querySelectorAll("td");
+          data += `${cols[0].innerText}\t${cols[1].innerText}\t${cols[2].innerText}\n`;
+        });
+
+        navigator.clipboard
+          .writeText(data)
+          .then(() => {
+            const feedback = document.getElementById("copy-feedback");
+            feedback.style.opacity = "1";
+            setTimeout(() => {
+              feedback.style.opacity = "0";
+            }, 2000);
+          })
+          .catch((err) => {
+            console.error("Failed to copy text: ", err);
+          });
+      }
+
+      // --- Event Listeners ---
+      document.getElementById("update-chart").addEventListener("click", () => {
+        const config = {
+          type: "updateChartConfig",
+          xMin: Number(document.getElementById("x-min").value),
+          xMax: Number(document.getElementById("x-max").value),
+          xType: document.getElementById("x-type").value,
+          xReverse: document.getElementById("x-reverse").checked,
+          yMin: Number(document.getElementById("y-min").value),
+          yMax: Number(document.getElementById("y-max").value),
+          yType: document.getElementById("y-type").value,
+          yReverse: document.getElementById("y-reverse").checked,
+        };
+        window.electronAPI.sendToMain("sidepanel-to-main", config);
+      });
+
+      document.getElementById("clear-points").addEventListener("click", () => {
+        // Send clear message to graph window
+        window.electronAPI.sendToMain("sidepanel-to-main", { type: "clearPoints" });
+      });
+
+      document.getElementById("toggle-lines").addEventListener("click", () => {
+        // Send toggle lines message to graph window
+        window.electronAPI.sendToMain("sidepanel-to-main", { type: "toggleLines" });
+      });
+
+      document.getElementById("copy-table").addEventListener("click", copyTableToClipboard);
+
+      // --- IPC Communication ---
+      window.electronAPI.onFromMain("main-to-sidepanel", (data) => {
+        if (data && data.type === "updatePoints") {
+          updateTable(data.points);
+        }
+        if (data && data.type === "linesToggled") {
+          const toggleBtn = document.getElementById("toggle-lines");
+          toggleBtn.textContent = data.showLines
+            ? "Hide Connecting Lines"
+            : "Show Connecting Lines";
+          toggleBtn.className = data.showLines
+            ? "w-full bg-orange-600 hover:bg-orange-700 rounded-md py-2 mt-2 font-semibold transition-colors"
+            : "w-full bg-purple-600 hover:bg-purple-700 rounded-md py-2 mt-2 font-semibold transition-colors";
+        }
+      });
+
+      // Send initial config on load
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("update-chart").click();
+      });
+    </script>
+  </body>
+</html>
