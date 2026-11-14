@@ -2,6 +2,8 @@
 
 A transparent desktop overlay for digitizing data from images of graphs. Lay it over a scanned PDF (or any image on screen), set the axis ranges to match the printed graph, click along the curve, and get a table of X/Y coordinates you can paste straight into Excel.
 
+![Graph Tracer overlaid on a log-log response spectrum, with traced points and the side panel's data table](docs/screenshot.png)
+
 ## Why
 
 Engineering data often only exists as a decades-old scanned page: think seismic floor response spectra (FRS) from a 30-year-old geotechnical report, plotted on log-log axes with no underlying numbers. Comparing a spectrum like that against your own test data means getting the curve back into numbers. Graph Tracer makes that a few minutes of clicking instead of squinting at gridlines:
